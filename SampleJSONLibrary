@@ -1,0 +1,42 @@
+[
+    {
+        "Hive":  "HKLM",
+        "Path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+        "Name":  "DeferFeatureUpdates",
+        "Value":  "0x00000001",
+        "Type":  "Dword",
+        "Comment":  "Windows Update Policy"
+    },
+    {
+        "Hive":  "HKLM",
+        "Path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+        "Name":  "BranchReadinessLevel",
+        "Value":  "0x00000010",
+        "Type":  "Dword",
+        "Comment":  "Windows Update Policy"
+    },
+    {
+        "Hive":  "HKLM",
+        "Path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+        "Name":  "DeferFeatureUpdatesPeriodInDays",
+        "Value":  "0x00000000",
+        "Type":  "Dword",
+        "Comment":  "Windows Update Policy"
+    },
+    {
+        "Hive":  "HKLM",
+        "Path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+        "Name":  "PauseFeatureUpdatesStartTime",
+        "Value":  "",
+        "Type":  "String",
+        "Comment":  "Windows Update Policy"
+    },
+    {
+        "Hive":  "HKLM",
+        "Path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+        "Name":  "ExcludeWUDriversInQualityUpdate",
+        "Value":  "0x00000001",
+        "Type":  "Dword",
+        "Comment":  "Windows Update Policy"
+    }
+]
