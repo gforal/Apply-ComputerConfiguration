@@ -16,6 +16,9 @@
     
     Author:     Graham Foral
     Date:       9/27/2022
+    Updated:    10/5/2022
+
+    For:        Pacific Life Insurance Company
 #>
 
 
@@ -32,8 +35,8 @@ $ExecDir = $MyInvocation.MyCommand.Path
 $ConfigItems = Get-Content -Raw -Path $SettingsLibrary | ConvertFrom-Json
 $CurrentItem = 1
 
-$MachineConfigItems = $ConfigItems | Where-Object { $ConfigItems.Hive -ne "HKCU" }
-$UserConfigItems = $ConfigItems | Where-Object { $ConfigItems.Hive -eq "HKCU" }
+$MachineConfigItems = $ConfigItems | Where-Object { $_.Hive -ne "HKCU" }
+$UserConfigItems = $ConfigItems | Where-Object { $_.Hive -eq "HKCU" }
 
 $UserProfiles = Get-ChildItem -Path "C:\Users" -Directory -Force -Exclude "All Users", "Default User", "Public"
 
@@ -76,9 +79,12 @@ ForEach ($MachineConfigItem in $MachineConfigItems) {
     }
 
 }
+
+
 If ($UserConfigItems) {
     Write-Host "Information: " -ForegroundColor Green -NoNewline
     Write-Host "Found $($UserProfiles.count) user profiles."
+    $CurrentItem = 1
 
     ForEach ($UserProfile in $UserProfiles) {
         Write-Host "Information: " -ForegroundColor Green -NoNewline
@@ -103,7 +109,7 @@ If ($UserConfigItems) {
                     Write-Host "Information: " -ForegroundColor Green -NoNewline
                     Write-Host "Item $($CurrentItem):`t `'$RegPath`' Does not exist. Creating..."
             
-                    New-Item -Path $RegPath -Force | Out-Null
+                    New-Item -Path $RegPath -Force -ErrorAction SilentlyContinue | Out-Null
                     New-ItemProperty -Path $RegPath -Name $UserConfigItem.Name -Value $UserConfigItem.Value -PropertyType $UserConfigItem.Type -Force | Out-Null
                     $CurrentItem = $CurrentItem + 1 
                       
