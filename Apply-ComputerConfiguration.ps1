@@ -16,7 +16,7 @@
     
     Author:     Graham Foral
     Date:       9/27/2022
-    Updated:    10/5/2022
+    Updated:    3/19/2024
 
 #>
 
@@ -30,14 +30,23 @@ $LogFile = "ApplyComputerSettings_" + (Get-ChildItem $SettingsLibrary).Name + "_
 
 Start-Transcript -Path $LogFile
 
-$ExecDir = $MyInvocation.MyCommand.Path
+$ExecDir = Split-Path -Path $MyInvocation.MyCommand.Path -Parent
 $ConfigItems = Get-Content -Raw -Path $SettingsLibrary | ConvertFrom-Json
 $CurrentItem = 1
 
 $MachineConfigItems = $ConfigItems | Where-Object { $_.Hive -ne "HKCU" }
 $UserConfigItems = $ConfigItems | Where-Object { $_.Hive -eq "HKCU" }
 
-$UserProfiles = Get-ChildItem -Path "C:\Users" -Directory -Force -Exclude "All Users", "Default User", "Public"
+$CurrentUser = (Get-CimInstance -Namespace "root\cimv2" -ClassName Win32_ComputerSystem -Property UserName).UserName.Split("\")[1]
+
+$ExcludedUsers = @(
+    "Default User",
+    "Public",
+    "All Users",
+    $CurrentUser
+)
+
+$UserProfiles = Get-ChildItem -Path "C:\Users" -Directory -Force -Exclude $ExcludedUsers
 
 Write-Host "Information: " -ForegroundColor Green -NoNewline
 Write-Host "Executing from $ExecDir"
@@ -57,14 +66,14 @@ ForEach ($MachineConfigItem in $MachineConfigItems) {
 
         If (Get-Item -Path $RegPath -ErrorAction SilentlyContinue) {
             Write-Host "Information: " -ForegroundColor Green -NoNewline
-            Write-Host "Item $($CurrentItem):`t `'$RegPath`' exists. Setting $($MachineConfigItem.Name) to $($MachineConfigItem.Value)"
+            Write-Host "Item $($CurrentItem): `'$RegPath`' exists. Setting $($MachineConfigItem.Name) to $($MachineConfigItem.Value)"
 
             New-ItemProperty -Path $RegPath -Name $MachineConfigItem.Name -Value $MachineConfigItem.Value -PropertyType $MachineConfigItem.Type -Force | Out-Null
             $CurrentItem = $CurrentItem + 1
         }
         Else {
             Write-Host "Information: " -ForegroundColor Green -NoNewline
-            Write-Host "Item $($CurrentItem):`t `'$RegPath`' does not exist. Creating path and setting $($MachineConfigItem.Name) to $($MachineConfigItem.Value)..."
+            Write-Host "Item $($CurrentItem): `'$RegPath`' does not exist. Creating path and setting $($MachineConfigItem.Name) to $($MachineConfigItem.Value)..."
 
             New-Item -Path $RegPath -Force | Out-Null
             New-ItemProperty -Path $RegPath -Name $MachineConfigItem.Name -Value $MachineConfigItem.Value -PropertyType $MachineConfigItem.Type -Force | Out-Null
@@ -89,24 +98,24 @@ If ($UserConfigItems) {
         Write-Host "Information: " -ForegroundColor Green -NoNewline
         Write-Host "Attempting to load NTUSER.DAT for user $($UserProfile.Name)."
     
-        & reg.exe load "HKLM\ConfigTemp" "$UserProfile\NTUSER.DAT"
+        & reg.exe load "HKLM\NTTemp" "$($UserProfile.FullName)\NTUSER.DAT"
     
         ForEach ($UserConfigItem in $UserConfigItems) {
             $RegPath = $UserConfigItem.Hive + ":`\" + $UserConfigItem.Path 
-            $RegPath = $RegPath.Replace("HKCU:", "HKLM:\ConfigTemp")
+            $RegPath = $RegPath.Replace("HKCU:", "HKLM:\NTTemp")
 
             If ($UserConfigItem.Comment) {
 
                 If (Get-Item -Path $RegPath -ErrorAction SilentlyContinue) {
                     Write-Host "Information: " -ForegroundColor Green -NoNewline
-                    Write-Host "Item $($CurrentItem):`t `'$RegPath`' Exists. Setting values in configuration file."
+                    Write-Host "Item $($CurrentItem): `'$RegPath`' exists. Setting values in configuration file."
 
                     New-ItemProperty -Path $RegPath -Name $UserConfigItem.Name -Value $UserConfigItem.Value -PropertyType $UserConfigItem.Type -Force | Out-Null
                     $CurrentItem = $CurrentItem + 1
                 }
                 Else {
                     Write-Host "Information: " -ForegroundColor Green -NoNewline
-                    Write-Host "Item $($CurrentItem):`t `'$RegPath`' Does not exist. Creating..."
+                    Write-Host "Item $($CurrentItem): `'$RegPath`' does not exist. Creating..."
             
                     New-Item -Path $RegPath -Force -ErrorAction SilentlyContinue | Out-Null
                     New-ItemProperty -Path $RegPath -Name $UserConfigItem.Name -Value $UserConfigItem.Value -PropertyType $UserConfigItem.Type -Force | Out-Null
@@ -123,9 +132,13 @@ If ($UserConfigItems) {
         }
         Write-Host "Information: " -ForegroundColor Green -NoNewline
         Write-Host "Unloading $UserProfile\NTUSER.DAT"
-        [gc]::Collect()
+
+        [System.GC]::Collect()
+        Write-Host "Information: " -ForegroundColor Green -NoNewline
+        Write-Host "Waiting 2 seconds before unloading NTUSER.DAT..."
+
         Start-Sleep -Seconds 2
-        & reg.exe unload "HKLM\ConfigTemp"
+        & reg.exe unload "HKLM\NTTemp"
         $CurrentItem = 1   
     }
 }
